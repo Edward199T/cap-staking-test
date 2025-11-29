@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Captain AI Staking</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body,html{height:100%;background:#000;color:#fff;font-family:'Orbitron',sans-serif;overflow:hidden}
+    .bg{position:fixed;inset:0;background:radial-gradient(circle at 50% 50%,#1a0033 0%,#000 70%)}
+    .container{position:relative;z-index:10;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px}
+    h1{font-size:80px;background:linear-gradient(90deg,#00ffff,#ff00ff);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:10px}
+    .subtitle{font-size:28px;color:#00ffff;margin-bottom:40px;letter-spacing:3px}
+    .panel{background:rgba(0,20,40,0.8);backdrop-filter:blur(20px);border:3px solid #00ffff;border-radius:25px;padding:40px;width:100%;max-width:440px;box-shadow:0 0 70px #00ffff66}
+    .stat{font-size:21px;margin:18px 0;text-align:left;color:#0ff}
+    .stat strong{color:#fff;font-weight:900}
+    input{width:100%;padding:20px;margin:25px 0 15px;background:#001122;border:2px solid #00ffff;border-radius:15px;color:white;font-size:20px;text-align:center}
+    button{width:100%;padding:20px;margin:12px 0;border:none;border-radius:15px;font-size:22px;font-weight:bold;cursor:pointer;transition:all .4s;box-shadow:0 8px 20px rgba(0,0,0,0.5)}
+    #connect{background:#ff00ff;color:white;font-size:26px;padding:22px}
+    #approve{background:#0066ff;color:white}
+    #stake{background:#00d4ff;color:black}
+    #unstake{background:#ff0066;color:white}
+    #claim{background:#00ff88;color:black}
+    .row{display:flex;gap:15px;margin-top:20px}
+    .row button{flex:1}
+    .hidden{display:none}
+    .ready{opacity:1;transform:scale(1.02)}
+    .notready{opacity:0.5;cursor:not-allowed}
+
+    /* مودال خفن Unstake */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:flex;justify-content:center;align-items:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .4s}
+    .modal.active{opacity:1;pointer-events:all}
+    .modal-content{background:#000c;border:3px solid #00ffff;border-radius:25px;padding:40px;width:90%;max-width:400px;box-shadow:0 0 80px #00ffff88;transform:scale(0.8;transition:transform .4s}
+    .modal.active .modal-content{transform:scale(1)}
+    .modal h3{color:#00ffff;font-size:28px;margin-bottom:20px;text-align:center}
+    .modal input{width:100%;padding:18px;background:#001122;border:2px solid #00ffff;border-radius:15px;color:white;font-size:20px;text-align:center;margin-bottom:25px}
+    .modal-buttons{display:flex;gap:15px}
+    .modal-buttons button{flex:1;padding:16px;font-size:18px;border-radius:12px}
+    #modal-cancel{background:#666;color:white}
+    #modal-confirm{background:#ff0066;color:white}
+  </style>
+</head>
+<body>
+  <div class="bg"></div>
+  <div class="container">
+    <h1>CAPTAIN AI</h1>
+    <div class="subtitle">STAKING DASHBOARD</div>
+
+    <div class="panel">
+      <button id="connect">CONNECT WALLET</button>
+
+      <div id="staking-section" class="hidden">
+        <div class="stat">Your Staked: <strong id="staked">0.00</strong> CAP</div>
+        <div class="stat">Rewards: <strong id="reward">0.000000</strong> CAP</div>
+        <div class="stat">Balance: <strong id="balance">0.00</strong> CAP</div>
+        <div class="stat" style="font-size:16px;color:#888">Total Staked: <strong id="total">0</strong> CAP</div>
+
+        <input id="amount" type="number" placeholder="Amount (e.g. 222222)" />
+
+        <button id="approve">1. Approve CAP</button>
+        <button id="stake" disabled class="notready">2. Stake</button>
+
+        <div class="row">
+          <button id="unstake">Unstake</button>
+          <button id="claim">Claim Rewards</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- مودال خفن Unstake -->
+  <div id="unstake-modal" class="modal">
+    <div class="modal-content">
+      <h3>UNSTAKE CAPTAIN</h3>
+      <input id="unstake-amount" type="number" placeholder="How much to unstake?" />
+      <div class="modal-buttons">
+        <button id="modal-cancel">Cancel</button>
+        <button id="modal-confirm">Confirm Unstake</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script>
+    const { ethers } = window;
+    const STAKING = "0x37BF9B23BAd5Af4eAea6Af1e0C88617547c2dfA7";
+    const TOKEN   = "0x006e18347556dADD014056fdcF2ae0422039796a";
+
+    let provider, signer, user, staking, token;
+    let currentAllowance = ethers.BigNumber.from(0);
+
+    const modal = document.getElementById('unstake-modal');
+    const modalInput = document.getElementById('unstake-amount');
+
+    document.getElementById('connect').onclick = async () => {
+      if (!window.ethereum) return alert("MetaMask not found!");
+      try {
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        user = await signer.getAddress();
+
+        staking = new ethers.Contract(STAKING, ["function stake(uint256)","function unstake(uint256)","function claimRewards()","function calculateReward(address) view returns(uint256)","function stakes(address) view returns(uint256 amount, uint256 timestamp)","function totalStaked() view returns(uint256)"], provider);
+        token = new ethers.Contract(TOKEN, ["function approve(address,uint256) returns(bool)","function allowance(address,address) view returns(uint256)","function balanceOf(address) view returns(uint256)"], provider);
+
+        document.getElementById('connect').style.display = 'none';
+        document.getElementById('staking-section').classList.remove('hidden');
+        update();
+        setInterval(update, 8000);
+      } catch (e) { alert("Connect failed: " + e.message); }
+    };
+
+    const fmt = n => Number(ethers.utils.formatUnits(n || 0, 6)).toFixed(6);
+    const toWei = n => ethers.utils.parseUnits(String(n || "0"), 6);
+
+    async function update() {
+      if (!user) return;
+      try {
+        const [s, r, t, b, a] = await Promise.all([
+          staking.stakes(user),
+          staking.calculateReward(user),
+          staking.totalStaked(),
+          token.balanceOf(user),
+          token.allowance(user, STAKING)
+        ]);
+        currentAllowance = a;
+
+        document.getElementById('staked').textContent = fmt(s.amount);
+        document.getElementById('reward').textContent = fmt(r);
+        document.getElementById('balance').textContent = fmt(b);
+        document.getElementById('total').textContent = Math.floor(fmt(t));
+
+        checkButtons();
+      } catch(e) { console.log(e); }
+    }
+
+    function checkButtons() {
+      const input = document.getElementById('amount').value.trim();
+      const amountWei = toWei(input);
+
+      if (!input || Number(input) <= 0) {
+        document.getElementById('approve').disabled = false;
+        document.getElementById('stake').disabled = true;
+        return;
+      }
+
+      if (currentAllowance.gte(amountWei)) {
+        document.getElementById('approve').textContent = "Approved";
+        document.getElementById('approve').disabled = true;
+        document.getElementById('stake').disabled = false;
+        document.getElementById('stake').classList.add('ready');
+      } else {
+        document.getElementById('approve').textContent = "1. Approve CAP";
+        document.getElementById('approve').disabled = false;
+        document.getElementById('stake').disabled = true;
+        document.getElementById('stake').classList.remove('ready');
+      }
+    }
+
+    document.getElementById('amount').addEventListener('input', checkButtons);
+
+    document.getElementById('approve').onclick = async () => {
+      const v = document.getElementById('amount').value.trim();
+      if (!v) return alert("Enter amount!");
+      try {
+        document.getElementById('approve').textContent = "Approving...";
+        const tx = await token.connect(signer).approve(STAKING, toWei(v));
+        await tx.wait();
+        currentAllowance = toWei(v);
+        alert("Approved " + v + " CAP!");
+        checkButtons();
+      } catch(e) {
+        document.getElementById('approve').textContent = "1. Approve CAP";
+        alert("Approve failed: " + (e.reason || e.message));
+      }
+    };
+
+    document.getElementById('stake').onclick = async () => {
+      if (document.getElementById('stake').disabled) return;
+      const v = document.getElementById('amount').value.trim();
+      try {
+        document.getElementById('stake').textContent = "Staking...";
+        const tx = await staking.connect(signer).stake(toWei(v));
+        await tx.wait();
+        alert("Staked " + v + " CAP successfully!");
+        document.getElementById('stake').textContent = "2. Stake";
+        update();
+      } catch(e) { alert("Stake failed: " + (e.reason || e.message)); }
+    };
+
+    // مودال Unstake
+    document.getElementById('unstake').onclick = () => {
+      modal.classList.add('active');
+      modalInput.focus();
+    };
+
+    document.getElementById('modal-cancel').onclick = () => {
+      modal.classList.remove('active');
+      modalInput.value = '';
+    };
+
+    document.getElementById('modal-confirm').onclick = async () => {
+      const v = modalInput.value.trim();
+      if (!v || Number(v) <= 0) return alert("Enter valid amount!");
+      try {
+        const tx = await staking.connect(signer).unstake(toWei(v));
+        await tx.wait();
+        alert("Unstaked " + v + " CAP!");
+        modal.classList.remove('active');
+        modalInput.value = '';
+        update();
+      } catch(e) { alert("Unstake failed: " + (e.reason || e.message)); }
+    };
+
+    document.getElementById('claim').onclick = async () => {
+      try {
+        const tx = await staking.connect(signer).claimRewards();
+        await tx.wait();
+        alert("Rewards claimed!");
+        update();
+      } catch(e) { alert("Claim failed: " + (e.reason || e.message)); }
+    };
+  </script>
+</body>
+</html>
