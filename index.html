@@ -3,78 +3,101 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Captain AI Staking</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet"/>
+  <title>CAPTAIN AI • STAKING</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body,html{height:100%;background:#000;color:#fff;font-family:'Orbitron',sans-serif;overflow:hidden}
-    .bg{position:fixed;inset:0;background:radial-gradient(circle at 50% 50%,#1a0033 0%,#000 70%)}
-    .container{position:relative;z-index:10;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px}
-    h1{font-size:80px;background:linear-gradient(90deg,#00ffff,#ff00ff);-webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:10px}
-    .subtitle{font-size:28px;color:#00ffff;margin-bottom:40px;letter-spacing:3px}
-    .panel{background:rgba(0,20,40,0.9);backdrop-filter:blur(20px);border:3px solid #00ffff;border-radius:25px;padding:40px;width:100%;max-width:440px;box-shadow:0 0 70px #00ffff66}
-    .stat{font-size:21px;margin:18px 0;text-align:left;color:#0ff}
-    .stat strong{color:#fff;font-weight:900}
-    input{width:100%;padding:20px;margin:25px 0 15px;background:#001122;border:2px solid #00ffff;border-radius:15px;color:white;font-size:20px;text-align:center}
-    button{width:100%;padding:20px;margin:12px 0;border:none;border-radius:15px;font-size:22px;font-weight:bold;cursor:pointer;transition:all .4s;box-shadow:0 8px 20px rgba(0,0,0,0.5)}
-    #connect{background:#ff00ff;color:white;font-size:26px;padding:22px}
-    #approve{background:#0066ff;color:white}
-    #stake{background:#00d4ff;color:black}
-    #unstake{background:#ff0066;color:white}
-    #claim{background:#00ff88;color:black}
-    .row{display:flex;gap:15px;margin-top:20px}
-    .row button{flex:1}
-    .hidden{display:none}
-    .ready{opacity:1;transform:scale(1.02)}
-    .notready{opacity:0.5;cursor:not-allowed}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:flex;justify-content:center;align-items:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity .4s}
-    .modal.active{opacity:1;pointer-events:all}
-    .modal-content{background:#000c;border:3px solid #00ffff;border-radius:25px;padding:40px;width:90%;max-width:400px;box-shadow:0 0 80px #00ffff88;transform:scale(0.8);transition:transform .4s}
-    .modal.active .modal-content{transform:scale(1)}
-    .modal h3{color:#00ffff;font-size:28px;margin-bottom:20px;text-align:center}
-    .modal input{width:100%;padding:18px;background:#001122;border:2px solid #00ffff;border-radius:15px;color:white;font-size:20px;text-align:center;margin-bottom:25px}
-    .modal-buttons{display:flex;gap:15px}
-    .modal-buttons button{flex:1;padding:16px;font-size:18px;border-radius:12px}
-    #modal-cancel{background:#666;color:white}
-    #modal-confirm{background:#ff0066;color:white}
+    body { font-family: 'Orbitron', sans-serif; overflow: hidden; }
+    .glass { background: rgba(10, 25, 50, 0.45); backdrop-filter: blur(20px); border: 1px solid rgba(0, 255, 255, 0.3); }
+    .neon-text { text-shadow: 0 0 20px #00ffff, 0 0 40px #00ffff; }
+    .neon-border { box-shadow: 0 0 30px #00ffff55, inset 0 0 20px #00ffff22; }
+    .glow-btn { transition: all 0.4s; }
+    .glow-btn:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0, 255, 255, 0.4); }
+    #particles-js { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: 0; }
   </style>
 </head>
-<body>
-  <div class="bg"></div>
-  <div class="container">
-    <h1>CAPTAIN AI</h1>
-    <div class="subtitle">STAKING DASHBOARD</div>
-    <div class="panel">
-      <button id="connect">CONNECT WALLET</button>
-      <div id="staking-section" class="hidden">
-        <div class="stat">Your Staked: <strong id="staked">0.00</strong> CAP</div>
-        <div class="stat">Rewards: <strong id="reward">0.000000</strong> CAP</div>
-        <div class="stat">Balance: <strong id="balance">0.00</strong> CAP</div>
-        <div class="stat" style="font-size:16px;color:#888">Total Staked: <strong id="total">0</strong> CAP</div>
-        <input id="amount" type="number" placeholder="Amount (e.g. 222222)" />
-        <button id="approve">1. Approve CAP</button>
-        <button id="stake" disabled class="notready">2. Stake</button>
-        <div class="row">
-          <button id="unstake">Unstake</button>
-          <button id="claim">Claim Rewards</button>
+<body class="bg-black text-white">
+
+  <div id="particles-js"></div>
+
+  <div class="relative z-10 min-h-screen flex items-center justify-center p-6">
+    <div class="w-full max-w-2xl">
+      <!-- Header -->
+      <div class="text-center mb-12 animate-fade-in">
+        <h1 class="text-7xl md:text-9xl font-black bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent neon-text">
+          CAPTAIN AI
+        </h1>
+        <p class="text-2xl md:text-4xl mt-4 text-cyan-300 tracking-widest">STAKING PORTAL</p>
+      </div>
+
+      <!-- Main Panel -->
+      <div class="glass rounded-3xl p-8 md:p-12 neon-border animate-slide-up">
+        <button id="connect" class="w-full py-6 text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl glow-btn mb-8">
+          CONNECT WALLET
+        </button>
+
+        <div id="staking-section" class="hidden space-y-6">
+          <!-- Stats -->
+          <div class="grid grid-cols-2 gap-6 text-lg">
+            <div class="glass p-6 rounded-2xl text-center">
+              <p class="text-cyan-400">Your Staked</p>
+              <p class="text-3xl font-bold mt-2" id="staked">0.00</p>
+            </div>
+            <div class="glass p-6 rounded-2xl text-center">
+              <p class="text-pink-400">Rewards</p>
+              <p class="text-3xl font-bold mt-2" id="reward">0.000000</p>
+            </div>
+            <div class="glass p-6 rounded-2xl text-center">
+              <p class="text-cyan-400">Balance</p>
+              <p class="text-3xl font-bold mt-2" id="balance">0.00</p>
+            </div>
+            <div class="glass p-6 rounded-2xl text-center">
+              <p class="text-purple-400">Total Staked</p>
+              <p class="text-3xl font-bold mt-2" id="total">0</p>
+            </div>
+          </div>
+
+          <!-- Amount Input -->
+          <input id="amount" type="number" placeholder="Enter amount (e.g. 222222)" 
+                 class="w-full px-8 py-6 text-2xl text-center bg-black/50 border-2 border-cyan-500 rounded-2xl focus:border-pink-500 focus:outline-none transition">
+
+          <!-- Action Buttons -->
+          <div class="grid grid-cols-2 gap-6 mt-8">
+            <button id="approve" class="py-6 text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 rounded-2xl glow-btn">APPROVE</button>
+            <button id="stake" disabled class="py-6 text-2xl font-bold bg-gradient-to-r from-cyan-400 to-teal-500 rounded-2xl opacity-50">STAKE</button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-6 mt-6">
+            <button id="unstake" class="py-6 text-2xl font-bold bg-gradient-to-r from-red-600 to-pink-600 rounded-2xl glow-btn">UNSTAKE</button>
+            <button id="claim" class="py-6 text-2xl font-bold bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl glow-btn">CLAIM</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div id="unstake-modal" class="modal">
-    <div class="modal-content">
-      <h3>UNSTAKE CAPTAIN</h3>
-      <input id="unstake-amount" type="number" placeholder="How much to unstake?" />
-      <div class="modal-buttons">
-        <button id="modal-cancel">Cancel</button>
-        <button id="modal-confirm">Confirm Unstake</button>
+  <!-- Unstake Modal -->
+  <div id="unstake-modal" class="fixed inset-0 bg-black/90 flex items-center justify-center z-50 hidden">
+    <div class="glass p-12 rounded-3xl neon-border max-w-md w-full mx-6 animate-modal">
+      <h2 class="text-5xl font-black text-center mb-10 bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">UNSTAKE</h2>
+      <input id="unstake-amount" type="number" placeholder="Amount to unstake" class="w-full px-8 py-6 text-2xl text-center bg-black/50 border-2 border-red-500 rounded-2xl focus:border-pink-500 focus:outline-none">
+      <div class="grid grid-cols-2 gap-6 mt-10">
+        <button id="modal-cancel" class="py-5 text-xl font-bold bg-gray-800 rounded-2xl">CANCEL</button>
+        <button id="modal-confirm" class="py-5 text-xl font-bold bg-gradient-to-r from-red-600 to-pink-600 rounded-2xl glow-btn">CONFIRM</button>
       </div>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
   <script>
+    /* Particles Background */
+    particlesJS("particles-js", {
+      particles: { number: { value: 80 }, color: { value: "#00ffff" }, shape: { type: "circle" }, opacity: { value: 0.5 }, size: { value: 3 }, line_linked: { enable: true, distance: 150, color: "#00ffff", opacity: 0.2, width: 1 }, move: { enable: true, speed: 2 } },
+      interactivity: { detect_on: "canvas", events: { onhover: { enable: true, mode: "repulse" }, resize: true } },
+      retina_detect: true
+    });
+
     const { ethers } = window;
     const STAKING = "0x37BF9B23BAd5Af4eAea6Af1e0C88617547c2dfA7";
     const TOKEN   = "0x006e18347556dADD014056fdcF2ae0422039796a";
@@ -86,7 +109,7 @@
     const modalInput = document.getElementById('unstake-amount');
 
     document.getElementById('connect').onclick = async () => {
-      if (!window.ethereum) return alert("MetaMask not found!");
+      if (!window.ethereum) return alert("MetaMask required!");
       try {
         await window.ethereum.request({ method: 'eth_requestAccounts' });
         provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -94,13 +117,13 @@
         user = await signer.getAddress();
 
         staking = new ethers.Contract(STAKING, ["function stake(uint256)","function unstake(uint256)","function claimRewards()","function calculateReward(address) view returns(uint256)","function stakes(address) view returns(uint256 amount, uint256 timestamp)","function totalStaked() view returns(uint256)"], provider);
-        token = new ethers.Contract(TOKEN, ["function approve(address,uint256) returns(bool)","function allowance(address,address) view returns(uint256)","function balanceOf(address) view returns(uint256)"], provider);
+        token = new ethers.Contract(TOKEN, ["function approve(address,uint256)","function allowance(address,address) view returns(uint256)","function balanceOf(address) view returns(uint256)"], provider);
 
-        document.getElementById('connect').style.display = 'none';
+        document.getElementById('connect').classList.add('hidden');
         document.getElementById('staking-section').classList.remove('hidden');
         update();
         setInterval(update, 8000);
-      } catch (e) { alert("Connect failed: " + e.message); }
+      } catch (e) { alert("Connection failed!"); }
     };
 
     const fmt = n => Number(ethers.utils.formatUnits(n || 0, 6)).toFixed(6);
@@ -129,20 +152,16 @@
         const stakeBtn = document.getElementById('stake');
 
         if (!input || Number(input) <= 0) {
-          approveBtn.disabled = false;
-          approveBtn.textContent = "1. Approve CAP";
-          stakeBtn.disabled = true;
-          stakeBtn.classList.remove('ready');
+          approveBtn.disabled = false; approveBtn.textContent = "APPROVE";
+          stakeBtn.disabled = true; stakeBtn.classList.add('opacity-50');
         } else if (currentAllowance.gte(amountWei)) {
-          approveBtn.textContent = "Approved";
+          approveBtn.textContent = "APPROVED";
           approveBtn.disabled = true;
-          stakeBtn.disabled = false;
-          stakeBtn.classList.add('ready');
+          stakeBtn.disabled = false; stakeBtn.classList.remove('opacity-50');
         } else {
-          approveBtn.textContent = "1. Approve CAP";
+          approveBtn.textContent = "APPROVE";
           approveBtn.disabled = false;
-          stakeBtn.disabled = true;
-          stakeBtn.classList.remove('ready');
+          stakeBtn.disabled = true; stakeBtn.classList.add('opacity-50');
         }
       } catch(e) { console.log(e); }
     }
@@ -153,33 +172,33 @@
       const v = document.getElementById('amount').value.trim();
       if (!v) return alert("Enter amount!");
       try {
-        document.getElementById('approve').textContent = "Approving...";
+        document.getElementById('approve').textContent = "APPROVING...";
         const tx = await token.connect(signer).approve(STAKING, toWei(v));
         await tx.wait();
         alert("Approved " + v + " CAP!");
         update();
-      } catch(e) { alert("Error: " + (e.reason || e.message)); }
+      } catch(e) { alert("Approve failed!"); }
     };
 
     document.getElementById('stake').onclick = async () => {
       if (document.getElementById('stake').disabled) return;
       const v = document.getElementById('amount').value.trim();
       try {
-        document.getElementById('stake').textContent = "Staking...";
+        document.getElementById('stake').textContent = "STAKING...";
         const tx = await staking.connect(signer).stake(toWei(v));
         await tx.wait();
         alert("Staked " + v + " CAP!");
         update();
-      } catch(e) { alert("Error: " + (e.reason || e.message)); }
+      } catch(e) { alert("Stake failed!"); }
     };
 
     document.getElementById('unstake').onclick = () => {
-      modal.classList.add('active');
+      modal.classList.remove('hidden');
       modalInput.focus();
     };
 
     document.getElementById('modal-cancel').onclick = () => {
-      modal.classList.remove('active');
+      modal.classList.add('hidden');
       modalInput.value = '';
     };
 
@@ -190,10 +209,10 @@
         const tx = await staking.connect(signer).unstake(toWei(v));
         await tx.wait();
         alert("Unstaked " + v + " CAP + Rewards sent!");
-        modal.classList.remove('active');
+        modal.classList.add('hidden');
         modalInput.value = '';
         update();
-      } catch(e) { alert("Unstake failed: " + (e.reason || e.message)); }
+      } catch(e) { alert("Unstake failed!"); }
     };
 
     document.getElementById('claim').onclick = async () => {
@@ -202,7 +221,7 @@
         await tx.wait();
         alert("Rewards claimed!");
         update();
-      } catch(e) { alert("Claim failed: " + (e.reason || e.message)); }
+      } catch(e) { alert("Claim failed!"); }
     };
   </script>
 </body>
